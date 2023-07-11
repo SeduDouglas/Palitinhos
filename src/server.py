@@ -1,7 +1,7 @@
 import socket
 import threading
 
-def handle_client(client_socket):
+def handle_client(state, client_socket):
     # Lida com as comunicações com um cliente específico
     while True:
         # Aguarda a mensagem do cliente
