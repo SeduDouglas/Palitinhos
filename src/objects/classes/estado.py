@@ -1,5 +1,9 @@
+
+from objects.enums.estagio import Estagio
+
 class Estado:
-    def __init__(self, estagio, quantidade_palitos, nome_jogador):
-        self.estagio = estagio
-        self.quantidade_palitos = quantidade_palitos
-        self.nome_jogador = nome_jogador
+    def __init__(self):
+        self.estagio = Estagio.PRE_JOGO
+        self.quantidade_palitos = 0
+        self.estados_clientes = {},
+        self.vencedor_rodada = ''

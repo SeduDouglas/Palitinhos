@@ -1,8 +1,8 @@
 from enum import Enum
 
 class Estagio(Enum):
-    ESTAGIO_1 = 1
-    ESTAGIO_2 = 2
-    ESTAGIO_3 = 3
-    ESTAGIO_4 = 4
-    ESTAGIO_5 = 5
+    PRE_JOGO = 1
+    MAO = 2
+    PALPITES = 3
+    RESULTADO = 4
+    FIM = 5

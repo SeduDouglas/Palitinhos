@@ -1,4 +1,49 @@
 import socket
+import threading
+from objects.classes.estado import Estado
+from objects.classes.estado_cliente import Estado_Cliente
+from objects.enums.estagio import Estagio
+from objects.enums.solicitacao_comunicacao import Solicitacao_Comunicacao
+
+
+fim = False
+def conexao(client_socket):
+    mensagem = client_socket.recv(1024).decode('utf-8')
+    nome = input(mensagem)
+    client_socket.send(nome.encode('utf-8'))
+    mensagem = client_socket.recv(1024).decode('utf-8')
+    pronto = input(mensagem)
+    client_socket.send(pronto.encode('utf-8'))
+
+def mao(client_socket):
+    resultado = 0
+    while resultado == 0:
+      mensagem = client_socket.recv(1024).decode('utf-8')
+      nome = input(mensagem)
+      client_socket.send(nome.encode('utf-8'))
+      resultado = int(client_socket.recv(1024).decode('utf-8'))
+
+def palpites():
+    retorno = 0
+    while resultado == 0:
+      mensagem = client_socket.recv(1024).decode('utf-8')
+      nome = input(mensagem)
+      client_socket.send(nome.encode('utf-8'))
+      resultado = int(client_socket.recv(1024).decode('utf-8'))
+
+def informar_palpite():
+  mensagem = client_socket.recv(1024).decode('utf-8')
+  print(f'{mensagem}')
+
+def resultado():
+      mensagem = client_socket.recv(1024).decode('utf-8')
+      print(f'{mensagem}')
+
+def fim():
+      mensagem = client_socket.recv(1024).decode('utf-8')
+      print(f'{mensagem}')
+      fim = True
+
 
 # Configurações do cliente
 HOST = '192.168.137.1'  # Endereço IP do servidor
@@ -11,20 +56,21 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((HOST, PORT))
 print(f'Conectado ao servidor {HOST}:{PORT}')
 
-while True:
-    # Aguarda a entrada do usuário
-    message = input('Digite uma mensagem (ou "sair" para encerrar): ')
-
-    # Envia a mensagem para o servidor
-    client_socket.send(message.encode('utf-8'))
-
-    if message.lower() == 'sair':
-        # Se o usuário digitar "sair", encerra o cliente
-        break
-
+while not fim:
     # Aguarda a resposta do servidor
-    response = client_socket.recv(1024).decode('utf-8')
-    print(f'Resposta do servidor: {response}')
+    command = int(client_socket.recv(1024).decode('utf-8'))
+    if Solicitacao_Comunicacao.CONEXAO == command:
+      conexao()
+    if Solicitacao_Comunicacao.MAO == command:
+        mao()
+    if Solicitacao_Comunicacao.PALPITES == command:
+        palpites()
+    if Solicitacao_Comunicacao.RESULTADO == command:
+        resultado()
+    if Solicitacao_Comunicacao.FIM == command:
+        fim()
+    if Solicitacao_Comunicacao.INFORMAR_PALPITE == command:
+        informar_palpite()
 
 # Fecha o soquete do cliente
 client_socket.close()
