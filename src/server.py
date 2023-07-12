@@ -8,7 +8,7 @@ from objects.enums.solicitacao_comunicacao import Solicitacao_Comunicacao
 server_state = Estado()
 
 def handle_client(state, client_socket, client_address):
-    client_socket.send(Solicitacao_Comunicacao.CONEXAO.encode('utf-8'))
+    client_socket.send(str(1).encode('utf-8'))
     conect_response = f'Informe seu nome, por favor.'
     client_socket.send(conect_response.encode('utf-8'))
     nome_jogador = client_socket.recv(1024).decode('utf-8')
@@ -25,7 +25,7 @@ def handle_client(state, client_socket, client_address):
         state.estados_clientes.pop((client_address[0], client_address[1]))
 
 def solicitar_mao(state, client_socket, chave):
-    client_socket.send(Solicitacao_Comunicacao.MAO.encode('utf-8'))
+    client_socket.send(str(Solicitacao_Comunicacao.MAO).encode('utf-8'))
     message = 'Informe a quantidade de palitos da mão atual:'
     client_socket.send(message.encode('utf-8'))
     qntMao = client_socket.recv(1024).decode('utf-8')
@@ -79,7 +79,7 @@ def palpites():
     if all(chr.informou_mao for chr in server_state.estados_clientes.values()):
         for chave, valor in server_state.estados_clientes.items():
             nome_palpitante = valor.nome_jogador
-            server_state.estados_clientes[chave].client_socket.send(Solicitacao_Comunicacao.PALPITES.encode('utf-8'))
+            server_state.estados_clientes[chave].client_socket.send(str(Solicitacao_Comunicacao.PALPITES).encode('utf-8'))
             message = 'Informe seu palpite:'
             server_state.estados_clientes[chave].client_socket.send(message.encode('utf-8'))
             qt_palpite = server_state.estados_clientes[chave].client_socket.recv(1024).decode('utf-8')
@@ -98,25 +98,29 @@ def palpites():
 
 def informar_palpite(nome_jogador, qt_palpite):
     for chave, valor in server_state.estados_clientes.items():
-        server_state.estados_clientes[chave].client_socket.send(Solicitacao_Comunicacao.INFORMAR_PALPITE.encode('utf-8'))
+        server_state.estados_clientes[chave].client_socket.send(str(Solicitacao_Comunicacao.INFORMAR_PALPITE).encode('utf-8'))
         message = f'Palpite de {nome_jogador}: {qt_palpite}'
         server_state.estados_clientes[chave].client_socket.send(message.encode('utf-8'))
 
 def resultado():
     nome_vencedor = ''
+    mensagem = ''
     for chave, valor in server_state.estados_clientes.items():
         if server_state.quantidade_palitos == server_state.estados_clientes[chave].quantidade_palitos_palpite:
             nome_vencedor = server_state.estados_clientes[chave].nome_jogador
             server_state.estados_clientes[chave].acertou = True
             break
+    if nome_vencedor == '':
+        mensagem = f'Não houveram vencedores nesta rodade. Quantidade total: {server_state.quantidade_palitos}'
+    else:
+        mensagem = f'Vencedor da rodada: {nome_vencedor}. Quantidade total: {server_state.quantidade_palitos}'
     for chave, valor in server_state.estados_clientes.items():
-        server_state.estados_clientes[chave].client_socket.send(Solicitacao_Comunicacao.RESULTADO.encode('utf-8'))
-        mensagem = f'Vencedor da rodada: {nome_vencedor}'
+        server_state.estados_clientes[chave].client_socket.send(str(Solicitacao_Comunicacao.RESULTADO).encode('utf-8'))
         server_state.estados_clientes[chave].client_socket.send(mensagem.encode('utf-8'))
     sobrou = {chave: valor for chave, valor in server_state.estados_clientes.items() if valor.acertou }
     if len(sobrou) <= 1:
         for chave, valor in server_state.estados_clientes.items():
-          server_state.estados_clientes[chave].client_socket.send(Solicitacao_Comunicacao.FIM.encode('utf-8'))
+          server_state.estados_clientes[chave].client_socket.send(str(Solicitacao_Comunicacao.FIM.encode('utf-8')))
           mensagem = f'Pato: {valor.nome_jogador}'
           server_state.estados_clientes[chave].client_socket.send(mensagem.encode('utf-8'))
         server_state.estagio = Estagio.FIM

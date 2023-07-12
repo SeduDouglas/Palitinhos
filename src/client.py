@@ -6,7 +6,7 @@ from objects.enums.estagio import Estagio
 from objects.enums.solicitacao_comunicacao import Solicitacao_Comunicacao
 
 
-fim = False
+naoFim = True
 def conexao(client_socket):
     mensagem = client_socket.recv(1024).decode('utf-8')
     nome = input(mensagem)
@@ -23,7 +23,7 @@ def mao(client_socket):
       client_socket.send(nome.encode('utf-8'))
       resultado = int(client_socket.recv(1024).decode('utf-8'))
 
-def palpites():
+def palpites(client_socket):
     retorno = 0
     while resultado == 0:
       mensagem = client_socket.recv(1024).decode('utf-8')
@@ -31,22 +31,22 @@ def palpites():
       client_socket.send(nome.encode('utf-8'))
       resultado = int(client_socket.recv(1024).decode('utf-8'))
 
-def informar_palpite():
+def informar_palpite(client_socket):
   mensagem = client_socket.recv(1024).decode('utf-8')
   print(f'{mensagem}')
 
-def resultado():
+def resultado(client_socket):
       mensagem = client_socket.recv(1024).decode('utf-8')
       print(f'{mensagem}')
 
-def fim():
+def fim(client_socket):
       mensagem = client_socket.recv(1024).decode('utf-8')
       print(f'{mensagem}')
-      fim = True
+      naoFim = False
 
 
 # Configurações do cliente
-HOST = '192.168.137.1'  # Endereço IP do servidor
+HOST = '192.168.101.236'  # Endereço IP do servidor
 PORT = 12345  # Porta do servidor
 
 # Cria um soquete TCP/IP
@@ -56,21 +56,22 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((HOST, PORT))
 print(f'Conectado ao servidor {HOST}:{PORT}')
 
-while not fim:
+while naoFim:
     # Aguarda a resposta do servidor
-    command = int(client_socket.recv(1024).decode('utf-8'))
-    if Solicitacao_Comunicacao.CONEXAO == command:
-      conexao()
+    command = client_socket.recv(32).decode('utf-8')
+    print(command)
+    if 1 == int(command):
+        conexao(client_socket)
     if Solicitacao_Comunicacao.MAO == command:
-        mao()
+        mao(client_socket)
     if Solicitacao_Comunicacao.PALPITES == command:
-        palpites()
+        palpites(client_socket)
     if Solicitacao_Comunicacao.RESULTADO == command:
-        resultado()
+        resultado(client_socket)
     if Solicitacao_Comunicacao.FIM == command:
-        fim()
+        fim(client_socket)
     if Solicitacao_Comunicacao.INFORMAR_PALPITE == command:
-        informar_palpite()
+        informar_palpite(client_socket)
 
 # Fecha o soquete do cliente
 client_socket.close()
