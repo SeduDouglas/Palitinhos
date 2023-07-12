@@ -65,6 +65,7 @@ def pre_jogo():
         server_state.estagio = Estagio.MAO
 
 def mao():
+    server_state.quantidade_palitos = 0
     for chave, valor in server_state.estados_clientes.items():
       valor.quantidade_palitos_palpite = -1
       valor.informou_mao = False
