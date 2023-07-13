@@ -6,3 +6,4 @@ class Estagio(Enum):
     PALPITES = 3
     RESULTADO = 4
     FIM = 5
+    

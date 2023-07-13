@@ -1,3 +1,4 @@
+import time
 import socket
 import threading
 from objects.classes.estado import Estado
@@ -5,19 +6,24 @@ from objects.classes.estado_cliente import Estado_Cliente
 from objects.enums.estagio import Estagio
 from objects.enums.solicitacao_comunicacao import Solicitacao_Comunicacao
 
+def send_message(client_socket, message):
+    client_socket.send(str(message).encode('utf-8'))
+    time.sleep(1)
+
+def receive_message(client_socket, size):
+    message = client_socket.recv(size).decode('utf-8')
+    time.sleep(1)
+    return message
 server_state = Estado()
 
 def handle_client(state, client_socket, client_address):
-    client_socket.send(str(1).encode('utf-8'))
-    conect_response = f'Informe seu nome, por favor.'
-    client_socket.send(conect_response.encode('utf-8'))
-    nome_jogador = client_socket.recv(1024).decode('utf-8')
+    send_message(client_socket, 1)
+    send_message(client_socket, f'Informe seu nome, por favor.\n')
+    nome_jogador = receive_message(client_socket, 1024)
     state.estados_clientes[(client_address[0], client_address[1])] = Estado_Cliente(nome_jogador, client_socket)
     # Lida com as comunicações com um cliente específico
-    response = f'Envie 1 quando estiver pronto, ou qualquer outro valor para desconectar'
-    client_socket.send(response.encode('utf-8'))
-    # Aguarda a mensagem do cliente
-    data = client_socket.recv(1024).decode('utf-8')
+    send_message(client_socket, f'Envie 1 quando estiver pronto, ou qualquer outro valor para desconectar\n')
+    data = receive_message(client_socket, 1)
     if data == '1':
         state.estados_clientes[(client_address[0], client_address[1])].pronto = True
     else:
@@ -25,18 +31,16 @@ def handle_client(state, client_socket, client_address):
         state.estados_clientes.pop((client_address[0], client_address[1]))
 
 def solicitar_mao(state, client_socket, chave):
-    client_socket.send(str(Solicitacao_Comunicacao.MAO).encode('utf-8'))
-    message = 'Informe a quantidade de palitos da mão atual:'
-    client_socket.send(message.encode('utf-8'))
-    qntMao = client_socket.recv(1024).decode('utf-8')
-    while not 0 <= qntMao <= 3:
+    send_message(client_socket, 2)
+    send_message(client_socket, 'Informe a quantidade de palitos da mão atual:')
+    qntMao = int(receive_message(client_socket, 1))
+    while not 0 <= int(qntMao) <= 3:
         resultado = 0
-        client_socket.send(resultado.encode('utf-8'))
-        message = 'Quantidade inválida. Digite um valor de 0 até 3:'
-        client_socket.send(message.encode('utf-8'))
-        qntMao = client_socket.recv(1024).decode('utf-8')
+        send_message(client_socket, resultado)
+        send_message(client_socket, 'Quantidade inválida. Digite um valor de 0 até 3:')
+        qntMao = int(receive_message(client_socket, 1))
     resultado = 1
-    client_socket.send(resultado.encode('utf-8'))
+    send_message(client_socket, resultado)
     state.quantidade_palitos += int(qntMao)
     server_state.estados_clientes[chave].informou_mao = True
 
@@ -51,7 +55,7 @@ def start_server(host, port):
     server_socket.listen(5)
     print(f'Servidor escutando em {host}:{port}...')
 
-    while server_state.estagio.PRE_JOGO:
+    while server_state.estagio == 1:
         # Aguarda uma nova conexão
         client_socket, client_address = server_socket.accept()
         print(f'Nova conexão de {client_address[0]}:{client_address[1]}')
@@ -62,7 +66,7 @@ def start_server(host, port):
 
 def pre_jogo():
     if len(server_state.estados_clientes) >= 2 and all(chr.pronto for chr in server_state.estados_clientes.values()):
-        server_state.estagio = Estagio.MAO
+        server_state.estagio = 2
 
 def mao():
     server_state.quantidade_palitos = 0
@@ -73,34 +77,35 @@ def mao():
       if not valor.acertou:
         client_thread = threading.Thread(target=solicitar_mao, args=(server_state, server_state.estados_clientes[chave].client_socket, chave, ))
         client_thread.start()
-    server_state.estagio = Estagio.PALPITES
+    server_state.estagio = 3
 
 def palpites():
     if all(chr.informou_mao for chr in server_state.estados_clientes.values()):
         for chave, valor in server_state.estados_clientes.items():
             nome_palpitante = valor.nome_jogador
-            server_state.estados_clientes[chave].client_socket.send(str(Solicitacao_Comunicacao.PALPITES).encode('utf-8'))
-            message = 'Informe seu palpite:'
-            server_state.estados_clientes[chave].client_socket.send(message.encode('utf-8'))
-            qt_palpite = server_state.estados_clientes[chave].client_socket.recv(1024).decode('utf-8')
+            client_socket = server_state.estados_clientes[chave].client_socket
+            send_message(client_socket, 3)
+            message = 'Informe seu palpite: '
+            send_message(client_socket, message)
+            qt_palpite = int(receive_message(client_socket, 1))
             while any(chr.quantidade_palitos_palpite == int(qt_palpite) for chr in server_state.estados_clientes.values()):
                 retorno = 0
-                server_state.estados_clientes[chave].client_socket.send(retorno.encode('utf-8'))
-                message = 'Palpite já foi dado por outra pessoa. Informe seu palpite:'
-                server_state.estados_clientes[chave].client_socket.send(message.encode('utf-8'))
-                qt_palpite = server_state.estados_clientes[chave].client_socket.recv(1024).decode('utf-8')
-            retorno = 0
-            server_state.estados_clientes[chave].client_socket.send(retorno.encode('utf-8'))
+                send_message(client_socket, retorno)
+                send_message(client_socket, 'Palpite já foi dado por outra pessoa. Informe seu palpite:')
+                qt_palpite = int(receive_message(client_socket, 1))
+            retorno = 1
+            send_message(client_socket, retorno)
             valor.quantidade_palitos_palpite = int(qt_palpite)
             server_state.estados_clientes[chave] = valor
             informar_palpite(nome_palpitante, qt_palpite)
-        server_state.estagio = Estagio.RESULTADO
+            time.sleep(1)
+        server_state.estagio = 4
 
 def informar_palpite(nome_jogador, qt_palpite):
     for chave, valor in server_state.estados_clientes.items():
-        server_state.estados_clientes[chave].client_socket.send(str(Solicitacao_Comunicacao.INFORMAR_PALPITE).encode('utf-8'))
-        message = f'Palpite de {nome_jogador}: {qt_palpite}'
-        server_state.estados_clientes[chave].client_socket.send(message.encode('utf-8'))
+        client_socket = server_state.estados_clientes[chave].client_socket
+        send_message(client_socket, 6)
+        send_message(client_socket, f'Palpite de {nome_jogador}: {qt_palpite}\n')
 
 def resultado():
     nome_vencedor = ''
@@ -115,27 +120,32 @@ def resultado():
     else:
         mensagem = f'Vencedor da rodada: {nome_vencedor}. Quantidade total: {server_state.quantidade_palitos}'
     for chave, valor in server_state.estados_clientes.items():
-        server_state.estados_clientes[chave].client_socket.send(str(Solicitacao_Comunicacao.RESULTADO).encode('utf-8'))
-        server_state.estados_clientes[chave].client_socket.send(mensagem.encode('utf-8'))
-    sobrou = {chave: valor for chave, valor in server_state.estados_clientes.items() if valor.acertou }
+        client_socket = server_state.estados_clientes[chave].client_socket
+        send_message(client_socket, 4)
+        send_message(client_socket, mensagem)
+    sobrou = {chave: valor for chave, valor in server_state.estados_clientes.items() if not valor.acertou }
     if len(sobrou) <= 1:
+        nome_pato = ''
         for chave, valor in server_state.estados_clientes.items():
-          server_state.estados_clientes[chave].client_socket.send(str(Solicitacao_Comunicacao.FIM.encode('utf-8')))
-          mensagem = f'Pato: {valor.nome_jogador}'
-          server_state.estados_clientes[chave].client_socket.send(mensagem.encode('utf-8'))
-        server_state.estagio = Estagio.FIM
+            if not valor.acertou:
+                nome_pato = valor.nome_jogador
+        for chave, valor in server_state.estados_clientes.items():
+            client_socket = server_state.estados_clientes[chave].client_socket
+            send_message(client_socket, 5)
+            send_message(client_socket, f'Pato: {nome_pato}')
+        server_state.estagio = 5
     else:
-        server_state.estagio = Estagio.MAO
+        server_state.estagio = 2
         
 def watch_state():
-    while not server_state.estagio.FIM:
-        if server_state.estagio == Estagio.PRE_JOGO:
+    while not server_state.estagio == 5:
+        if server_state.estagio == 1:
             pre_jogo()
-        if server_state.estagio == Estagio.MAO:
+        if server_state.estagio == 2:
             mao()
-        if server_state.estagio == Estagio.PALPITES:
+        if server_state.estagio == 3:
             palpites()
-        if server_state.estagio == Estagio.RESULTADO:
+        if server_state.estagio == 4:
             resultado()
 
 
